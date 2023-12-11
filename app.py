@@ -1,4 +1,7 @@
 import requests
+from bs4 import BeautifulSoup
+import time, subprocess, sqlite3
+
 from flask import Flask, request
 from decouple import config  # Import the config function from decouple
 
@@ -12,6 +15,9 @@ keywords = []
 # Initialize Flask app
 app = Flask(__name__)
 
+# Run get items
+subprocess.Popen(['python', 'fm_keywords.py'])
+
 # Define a route to handle incoming updates from Telegram
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -20,44 +26,98 @@ def webhook():
     # Check if the update contains a message
     if 'message' in update:
         message = update['message']
-        text = message.get('text', '')
+        user_id = message['from'].get('id', '')
+        text = message.get('text', 'Error Empty key')
+        keyword = text[text.find(' ')+1:].strip()
+        
 
         # Handle /add_key command
-        if text.startswith('/add_key'):
-            add_key(text)
+        if text.startswith('/addkey '):
+            print(user_id, keyword)
+            add_keyword(user_id, keyword)
 
         # Handle /del_key command
-        elif text.startswith('/del_key'):
-            del_key(text)
+        elif text.startswith('/delkey '):
+            delete_keyword(user_id, keyword)
 
-    return 'hi', 200
+    return 'success', 200
 
-# Function to add a keyword to the list
-def add_key(text):
-    keyword = text[len('/add_key '):].strip()
+# # Function to add a keyword to the list
+# def add_key(text):
+#     keyword = text[len('/add_key '):].strip()
+#     if keyword:
+#         keywords.append(keyword)
+#         send_message("Keyword added successfully.")
+def add_keyword(user_id, keyword):
     if keyword:
         keywords.append(keyword)
         send_message("Keyword added successfully.")
+    
+    conn = sqlite3.connect('keywords.db')
+    cursor = conn.cursor()
 
-# Function to delete a keyword from the list
-def del_key(text):
-    keyword = text[len('/del_key '):].strip()
-    if keyword in keywords:
-        keywords.remove(keyword)
-        send_message("Keyword deleted successfully.")
-    else:
+    # Insert the keyword into the table
+    cursor.execute('INSERT INTO keywords (user_id, keyword) VALUES (?, ?)', (user_id, keyword))
+
+    conn.commit()
+    conn.close()
+    
+    message = send_message("Keyword added successfully.")
+    
+    send_message(user_id, message)
+
+# # Function to get a keywords from the list
+def get_keywords(user_id):
+    conn = sqlite3.connect('keywords.db')
+    cursor = conn.cursor()
+
+    # Select all keywords for the specified user
+    cursor.execute('SELECT keyword FROM keywords WHERE user_id = ?', (user_id,))
+    keywords = [row[0] for row in cursor.fetchall()]
+
+    conn.close()
+    
+    return keywords
+
+# # Function to delete a keyword from the list
+# def del_key(text):
+#     keyword = text[len('/del_key '):].strip()
+#     if keyword in keywords:
+#         keywords.remove(keyword)
+#         send_message("Keyword deleted successfully.")
+#     else:
+#         send_message("Keyword not found.")
+def delete_keyword(user_id, keyword):
+    
+    if keyword not in get_keywords(user_id):
         send_message("Keyword not found.")
+        return
+
+    conn = sqlite3.connect('keywords.db')
+    cursor = conn.cursor()
+
+    # Delete the keyword for the specified user
+    cursor.execute('DELETE FROM keywords WHERE user_id = ? AND keyword = ?', (user_id, keyword))
+
+    conn.commit()
+    conn.close()
+    
+    send_message("Keyword deleted successfully.")
+
 
 # Function to send a message to the chat
-def send_message(message):
+def send_message(user_id, message):
     url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
-    data = {'chat_id': CHAT_ID, 'text': message}
+    data = {'chat_id': user_id, 'text': message}
     requests.post(url, data=data)
 
 if __name__ == '__main__':
     app.run(port=5000)
+    
+#-----------------------------------------
 
 
+#_---------------------------------------
 
 # from flask import Flask, request
 # import pprint
@@ -74,7 +134,7 @@ if __name__ == '__main__':
 # def root():
 #     return '<h1>Happy Hacking!</h1>' \
 #            '<h3>root 페이지입니다.</h3>'
-           
+
 # @app.route(f'/{token}', methods=['POST'])
 # def telegram():    
 #     # [1] 방식
