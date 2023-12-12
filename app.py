@@ -17,6 +17,7 @@ app = Flask(__name__)
 
 # Run get items
 subprocess.Popen(['python', 'fm_keywords.py'])
+subprocess.run(['python', 'create_db.py'])
 
 # Define a route to handle incoming updates from Telegram
 @app.route('/webhook', methods=['POST'])
