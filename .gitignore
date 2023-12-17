@@ -1,5 +1,7 @@
-.env
 venv
 __pycache__
+build
+dist
+.env
 keywords.db
 test.py
