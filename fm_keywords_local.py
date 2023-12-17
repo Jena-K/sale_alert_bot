@@ -2,8 +2,9 @@ import tkinter as tk
 from threading import Thread, Event, Timer
 import requests, os, sys
 from bs4 import BeautifulSoup
-from decouple import config
+# from decouple import config
 from dotenv import load_dotenv
+from tkinter import font as tkFont
 
 # 키워드 목록 불러오기
 def load_keywords(file_path):
@@ -37,7 +38,7 @@ def fetch_posts(url, fetched_posts, bot_token, chat_id, keywords):
             fetched_posts.add(post_url)
             
             # Check if the title contains any of the keywords
-            if any(keyword.lower() in title.lower() for keyword in keywords):
+            if any(keyword.lower() in title.lower() for keyword in keywords) or ('NEW' in keywords):
                 message = f"{title}\n{post_url}"
                 message_thread = Thread(target=send_telegram_message, args=[bot_token, chat_id, message])
                 message_thread.start()
@@ -95,21 +96,6 @@ bot_token = os.getenv('BOT_TOKEN')
 chat_id = os.getenv('CHAT_ID')
 interval = 10
 
-# dotenv 대신 config 사용했을 경우 ----------------- 
-# if getattr(sys, 'frozen', False):
-#     # The application is frozen
-#     env_path = os.path.join(sys._MEIPASS, '.env')
-# else:
-#     # The application is not frozen
-#     env_path = '.env'
-
-# config.read_env(env_path)
-
-# bot_token = config('BOT_TOKEN')
-# chat_id = config('CHAT_ID')
-# interval = 10
-#----------------------------------------------------
-
 # Initialize threading event
 stop_event = Event()
 
@@ -118,8 +104,8 @@ keywords = load_keywords('keywords.txt')
 
 # GUI setup
 window = tk.Tk()
-window.title("Bot")
-window.geometry("200x80")
+window.title("FM BOT")
+window.geometry("230x80")
 window.protocol("WM_DELETE_WINDOW", on_close)
 
 # Calculate the center position
@@ -135,11 +121,14 @@ window.geometry(f"+{center_x}+{center_y}")
 button_frame = tk.Frame(window)
 button_frame.pack(pady=20)
 
+# Define the font (family, size, style)
+custom_font = tkFont.Font(family='Helvetica', size=10)
+
 # Start and Exit buttons inside the frame
-start_button = tk.Button(button_frame, text="Start", command=start_scraping)
+start_button = tk.Button(button_frame, text="Start", width=7, height=2, command=start_scraping, font=custom_font)
 start_button.pack(side=tk.LEFT, padx=10)
 
-exit_button = tk.Button(button_frame, text="Exit", command=stop_scraping)
+exit_button = tk.Button(button_frame, text="Exit", width=7, height=2, command=stop_scraping, font=custom_font)
 exit_button.pack(side=tk.LEFT, padx=10)
 
 # Start the GUI event loop

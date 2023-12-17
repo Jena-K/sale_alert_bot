@@ -4,4 +4,4 @@ build
 dist
 .env
 keywords.db
-test.py
+*.spec
